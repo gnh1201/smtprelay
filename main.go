@@ -18,6 +18,15 @@ import (
 )
 
 func connectionChecker(peer smtpd.Peer) error {
+	// Allow all connection requests if set allowed recipients
+	if allowedRecipients != nil {
+		return nil
+	}
+
+        return _connectionChecker(peer)
+}
+
+func _connectionChecker(peer smtpd.Peer) error {
 	// This can't panic because we only have TCP listeners
 	peerIP := peer.Addr.(*net.TCPAddr).IP
 
@@ -132,10 +141,16 @@ func recipientChecker(peer smtpd.Peer, addr string) error {
 		return nil
 	}
 
+        // Check a peer when the recipient is not matched
+	if _connectionChecker(peer) == nil {
+		// Permiited by connectionChecker
+                return nil
+	}
+
 	log.WithFields(logrus.Fields{
 		"peer":              peer.Addr,
 		"recipient_address": addr,
-	}).Warn("recipient address not allowed by allowed_recipients pattern")
+     	}).Warn("recipient address not allowed by allowed_recipients pattern")
 	return smtpd.Error{Code: 451, Message: "Bad recipient address"}
 }
 
